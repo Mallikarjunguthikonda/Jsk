@@ -1,0 +1,5 @@
+gen_icon.py
+build/classes/
+build/gen/
+build/res/
+build/debug.keystore
