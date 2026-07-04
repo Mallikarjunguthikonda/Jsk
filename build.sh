@@ -39,8 +39,10 @@ aapt package -f \
     -I "$ANDROID_JAR" \
     -F "$OUT/love-unaligned.apk"
 
-echo "=== Step 5: Add classes.dex to APK ==="
-aapt add -f "$OUT/love-unaligned.apk" "$OUT/classes/classes.dex"
+echo "=== Step 5: Add classes.dex to APK (relative path) ==="
+cd "$OUT/classes"
+aapt add -f "$OUT/love-unaligned.apk" classes.dex
+cd "$PROJECT"
 
 echo "=== Step 6: Zipalign (4-byte alignment) ==="
 zipalign -f -p 4 "$OUT/love-unaligned.apk" "$OUT/love-aligned.apk"
