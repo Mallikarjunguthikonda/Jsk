@@ -5,7 +5,6 @@ PROJECT="$HOME/love-app"
 ANDROID_JAR="$HOME/android-sdk/platforms/android-34/android.jar"
 OUT="$PROJECT/build"
 PKG="com/loveapp"
-PKG_DOT="com.loveapp"
 
 rm -rf "$OUT"
 mkdir -p "$OUT"/{classes,gen,apk}
@@ -30,7 +29,6 @@ cd "$OUT/classes"
 d8 --lib "$ANDROID_JAR" \
     --output "." \
     $PKG/*.class
-ls -la classes.dex
 
 echo "=== Step 4: Package APK with resources ==="
 cd "$PROJECT"
@@ -39,12 +37,15 @@ aapt package -f \
     -S res \
     -A assets \
     -I "$ANDROID_JAR" \
-    -F "$OUT/love-unsigned.apk"
+    -F "$OUT/love-unaligned.apk"
 
 echo "=== Step 5: Add classes.dex to APK ==="
-aapt add -f "$OUT/love-unsigned.apk" "$OUT/classes/classes.dex"
+aapt add -f "$OUT/love-unaligned.apk" "$OUT/classes/classes.dex"
 
-echo "=== Step 6: Generate debug keystore ==="
+echo "=== Step 6: Zipalign (4-byte alignment) ==="
+zipalign -f -p 4 "$OUT/love-unaligned.apk" "$OUT/love-aligned.apk"
+
+echo "=== Step 7: Generate debug keystore ==="
 KEYSTORE="$OUT/debug.keystore"
 if [ ! -f "$KEYSTORE" ]; then
     keytool -genkey -v -keystore "$KEYSTORE" \
@@ -54,20 +55,24 @@ if [ ! -f "$KEYSTORE" ]; then
         -dname "CN=LoveApp, OU=Dev, O=LoveApp, L=Unknown, ST=Unknown, C=US"
 fi
 
-echo "=== Step 7: Sign APK ==="
+echo "=== Step 8: Sign APK ==="
 apksigner sign --ks "$KEYSTORE" \
     --ks-pass pass:android \
     --key-pass pass:android \
-    "$OUT/love-unsigned.apk"
+    "$OUT/love-aligned.apk"
 
-mv "$OUT/love-unsigned.apk" "$OUT/love.apk"
+mv "$OUT/love-aligned.apk" "$OUT/love.apk"
+rm -f "$OUT/love-unaligned.apk"
 
 echo ""
 echo "=== SUCCESS ==="
 echo "APK created at: $OUT/love.apk"
 ls -lh "$OUT/love.apk"
+echo ""
+echo "APK signature verification:"
+apksigner verify --verbose "$OUT/love.apk" 2>&1 | grep -E "(Verifies|Verified)"
 
 echo ""
-echo "=== To install directly on device ==="
-echo "  cp $OUT/love.apk /sdcard/Download/"
-echo "Then open the file with a file manager to install."
+echo "=== To download from GitHub ==="
+echo "Open: https://github.com/Mallikarjunguthikonda/Jsk"
+echo "Then browse to build/love.apk and tap Download"
